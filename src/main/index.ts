@@ -1,6 +1,14 @@
 import { join } from "node:path";
-import { app, BrowserWindow, clipboard, ipcMain,globalShortcut} from "electron";
-import Clipping from "../renderer/components/clipping";
+import {
+  app,
+  BrowserWindow,
+  clipboard,
+  ipcMain,
+  globalShortcut,
+  Notification,
+  Tray,
+} from "electron";
+let tray: Tray | null = null;
 
 const createWindow = () => {
   const mainWindow = new BrowserWindow({
@@ -31,14 +39,40 @@ const createWindow = () => {
   return mainWindow;
 };
 
-app.on("ready", ()=>{
-  const BrowserWindow = createWindow();
-  globalShortcut.register('CommandOrControl+Shift+C',()=>{
-    const content = clipboard.readText();
-
-  })
+app.on("ready", () => {
+  const browserWindow = createWindow();
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: "Show Window",
+      click: () => {
+        browserWindow.show();
+        browserWindow.focus();
+      },
+    },
+    { label: "Quit", role: "quit" },
+  ]);
+  tray = new Tray("./src/assets/trayTemplate.png");
+  tray.setContextMenu(contextMenu);
+  tray.on("click", () => {});
+  globalShortcut.register("CommandOrControl+Shift+Alt+C", () => {
+    app.focus();
+    browserWindow.show();
+    browserWindow.focus();
+  });
+  globalShortcut.register("CommandOrControl+Shift+Alt+X", () => {
+    let content = clipboard.readText();
+    content = content.toUpperCase();
+    clipboard.writeText(content);
+    new Notification({
+      title: "Capitlized Clipboard",
+      subtitle: "Copied to clipboard",
+      body: content,
+    }).show();
+  });
 });
-
+app.on("quit", () => {
+  globalShortcut.unregisterAll();
+});
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
@@ -50,9 +84,9 @@ app.on("activate", () => {
     createWindow();
   }
 });
-ipcMain.on("write-to-clipboard", (_, content:string) => {
+ipcMain.on("write-to-clipboard", (_, content: string) => {
   clipboard.writeText(content);
 });
-ipcMain.handle('read-from-clipboard',(_)=>{
+ipcMain.handle("read-from-clipboard", (_) => {
   return clipboard.readText();
-})
+});
