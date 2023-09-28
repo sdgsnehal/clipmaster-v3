@@ -9,3 +9,6 @@ type Clipping = {
   type?: string;
   value: string;
 };
+declare interface window{
+  api:import('../src/preload').Api
+}
